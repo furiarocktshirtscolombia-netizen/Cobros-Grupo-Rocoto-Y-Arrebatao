@@ -1,4 +1,4 @@
-import { RawInventoryRow, ArticleSummary, SedeSummary, DashboardStats, InventoryMovement } from '../types';
+import { RawInventoryRow, ArticleSummary, SedeSummary, DashboardStats, InventoryMovement, ReliabilitySummary, ReliabilityStats } from '../types';
 import { parse, isValid } from 'date-fns';
 
 const EXACT_MOJIBAKE_MAP: Record<string, string> = {
@@ -299,5 +299,78 @@ export function getDashboardStats(articles: ArticleSummary[]): DashboardStats {
     totalCobrables: articles.filter(a => a.debeCobrar).length,
     valorTotalCobro: articles.reduce((acc, a) => acc + a.totalCobro, 0),
     sedes
+  };
+}
+
+export function getReliabilitySummary(articles: ArticleSummary[]): ReliabilitySummary {
+  const sedesMap = new Map<string, ArticleSummary[]>();
+  
+  articles.forEach(a => {
+    if (!sedesMap.has(a.sede)) sedesMap.set(a.sede, []);
+    sedesMap.get(a.sede)!.push(a);
+  });
+
+  const sedesStats: ReliabilityStats[] = Array.from(sedesMap.entries()).map(([sede, arts]) => {
+    const articulosEvaluados = arts.length;
+    const articulosSinDiferencia = arts.filter(a => Math.abs(a.totalDiferencia) < 0.0001).length;
+    const articulosConDiferencia = articulosEvaluados - articulosSinDiferencia;
+    const confiabilidad = articulosEvaluados > 0 ? (articulosSinDiferencia / articulosEvaluados) * 100 : 0;
+    
+    const variacionTotal = arts.reduce((acc, a) => acc + a.totalDiferencia, 0);
+    const impactoEconomico = arts.reduce((acc, a) => acc + (Math.abs(a.totalDiferencia) * (a.ultimoCoste || a.costePromedio)), 0);
+
+    let nivel: ReliabilityStats['nivel'] = 'Crítica';
+    if (confiabilidad >= 90) nivel = 'Alta';
+    else if (confiabilidad >= 75) nivel = 'Media';
+    else if (confiabilidad >= 60) nivel = 'Baja';
+
+    const sortedByImpact = [...arts].sort((a, b) => {
+      const impactA = Math.abs(a.totalDiferencia) * (a.ultimoCoste || a.costePromedio);
+      const impactB = Math.abs(b.totalDiferencia) * (b.ultimoCoste || b.costePromedio);
+      return impactB - impactA;
+    });
+
+    const topArticulosCriticos = sortedByImpact.slice(0, 10).map(a => ({
+      articulo: a.articulo,
+      variacion: a.totalDiferencia,
+      impacto: Math.abs(a.totalDiferencia) * (a.ultimoCoste || a.costePromedio)
+    }));
+
+    const sortedByReliability = [...arts].sort((a, b) => Math.abs(a.totalDiferencia) - Math.abs(b.totalDiferencia));
+    const topArticulosConfiables = sortedByReliability.slice(0, 10).map(a => ({
+      articulo: a.articulo,
+      variacion: a.totalDiferencia,
+      impacto: Math.abs(a.totalDiferencia) * (a.ultimoCoste || a.costePromedio)
+    }));
+
+    return {
+      sede,
+      confiabilidad,
+      nivel,
+      articulosEvaluados,
+      articulosSinDiferencia,
+      articulosConDiferencia,
+      variacionTotal,
+      impactoEconomico,
+      topArticulosCriticos,
+      topArticulosConfiables
+    };
+  }).sort((a, b) => b.confiabilidad - a.confiabilidad);
+
+  const totalSedes = sedesStats.length;
+  const sedeMasConfiable = sedesStats.length > 0 ? sedesStats[0].sede : 'N/A';
+  const sedeMenosConfiable = sedesStats.length > 0 ? sedesStats[sedesStats.length - 1].sede : 'N/A';
+  const promedioConfiabilidad = totalSedes > 0 ? sedesStats.reduce((acc, s) => acc + s.confiabilidad, 0) / totalSedes : 0;
+  const totalDiferencias = sedesStats.reduce((acc, s) => acc + s.articulosConDiferencia, 0);
+  const impactoEconomicoTotal = sedesStats.reduce((acc, s) => acc + s.impactoEconomico, 0);
+
+  return {
+    totalSedes,
+    sedeMasConfiable,
+    sedeMenosConfiable,
+    promedioConfiabilidad,
+    totalDiferencias,
+    impactoEconomicoTotal,
+    sedesStats
   };
 }

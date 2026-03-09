@@ -40,3 +40,26 @@ export interface DashboardStats {
   valorTotalCobro: number;
   sedes: SedeSummary[];
 }
+
+export interface ReliabilityStats {
+  sede: string;
+  confiabilidad: number;
+  nivel: 'Alta' | 'Media' | 'Baja' | 'Crítica';
+  articulosEvaluados: number;
+  articulosSinDiferencia: number;
+  articulosConDiferencia: number;
+  variacionTotal: number;
+  impactoEconomico: number;
+  topArticulosCriticos: { articulo: string; variacion: number; impacto: number }[];
+  topArticulosConfiables: { articulo: string; variacion: number; impacto: number }[];
+}
+
+export interface ReliabilitySummary {
+  totalSedes: number;
+  sedeMasConfiable: string;
+  sedeMenosConfiable: string;
+  promedioConfiabilidad: number;
+  totalDiferencias: number;
+  impactoEconomicoTotal: number;
+  sedesStats: ReliabilityStats[];
+}

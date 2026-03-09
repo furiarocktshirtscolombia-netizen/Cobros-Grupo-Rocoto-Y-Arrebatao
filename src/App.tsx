@@ -11,20 +11,22 @@ import {
   Building2, 
   LayoutDashboard, 
   FileSearch,
-  Receipt
+  Receipt,
+  Target
 } from 'lucide-react';
 import { FileUpload } from './components/FileUpload';
 import { StatsCard } from './components/StatsCard';
 import { InventoryTable } from './components/InventoryTable';
 import { Filters } from './components/Filters';
 import { ExportButtons } from './components/ExportButtons';
+import { ReliabilityView } from './components/ReliabilityView';
 import { ArticleSummary } from './types';
 import { getDashboardStats } from './utils/inventory';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const [inventoryData, setInventoryData] = useState<ArticleSummary[]>([]);
-  const [activeTab, setActiveTab] = useState<'summary' | 'analysis' | 'charges' | 'debug'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'analysis' | 'charges' | 'reliability' | 'debug'>('summary');
   const [debugMode] = useState(false); // Set to true to enable the Debug tab
   const [debugData, setDebugData] = useState<{ info: any, preview: any[] } | null>(null);
   const [filters, setFilters] = useState({
@@ -117,6 +119,12 @@ export default function App() {
                 >
                   Cobros
                 </button>
+                <button 
+                  onClick={() => setActiveTab('reliability')}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'reliability' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Confiabilidad
+                </button>
                 {debugMode && (
                   <button 
                     onClick={() => setActiveTab('debug')}
@@ -184,6 +192,7 @@ export default function App() {
                 {activeTab === 'summary' && <><LayoutDashboard className="w-5 h-5 mr-2 text-indigo-500" /> Resumen por Sede</>}
                 {activeTab === 'analysis' && <><FileSearch className="w-5 h-5 mr-2 text-indigo-500" /> Detalle de Análisis</>}
                 {activeTab === 'charges' && <><Receipt className="w-5 h-5 mr-2 text-indigo-500" /> Reporte Final de Cobro</>}
+                {activeTab === 'reliability' && <><Target className="w-5 h-5 mr-2 text-indigo-500" /> Informe de Confiabilidad</>}
                 {activeTab === 'debug' && <><FileSearch className="w-5 h-5 mr-2 text-indigo-500" /> Debug Técnico</>}
               </h2>
               <ExportButtons 
@@ -250,6 +259,17 @@ export default function App() {
                   <InventoryTable 
                     data={activeTab === 'charges' ? filteredData.filter(a => a.debeCobrar) : filteredData} 
                   />
+                </motion.div>
+              )}
+
+              {activeTab === 'reliability' && (
+                <motion.div
+                  key="reliability"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <ReliabilityView data={inventoryData} />
                 </motion.div>
               )}
 
