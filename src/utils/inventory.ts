@@ -204,12 +204,14 @@ export function normalizeData(rawRows: RawInventoryRow[]): { articles: ArticleSu
 
     const subarticulo = (row.subarticulo || 'UNIDADES').toString().toUpperCase().trim();
     const sedeStr = row.sede.toString().trim();
+    const ccStr = (row.cc || '').toString().trim();
     const articuloStr = row.articulo.toString().trim();
-    const key = `${sedeStr}|${articuloStr}`;
+    const key = `${sedeStr}|${ccStr}|${articuloStr}`;
 
     if (!grouped.has(key)) {
       grouped.set(key, {
         sede: sedeStr,
+        cc: ccStr,
         articulo: articuloStr,
         subarticulo,
         subfamilia: (row.subfamilia || '').toString().trim(),

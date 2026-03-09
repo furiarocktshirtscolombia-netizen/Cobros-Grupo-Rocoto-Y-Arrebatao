@@ -29,6 +29,7 @@ export default function App() {
   const [debugData, setDebugData] = useState<{ info: any, preview: any[] } | null>(null);
   const [filters, setFilters] = useState({
     sede: '',
+    cc: '',
     subfamilia: '',
     status: 'all',
     search: ''
@@ -48,6 +49,7 @@ export default function App() {
     setInventoryData([]);
     setFilters({
       sede: '',
+      cc: '',
       subfamilia: '',
       status: 'all',
       search: ''
@@ -58,6 +60,7 @@ export default function App() {
   const filteredData = useMemo(() => {
     return inventoryData.filter(item => {
       const matchesSede = !filters.sede || item.sede === filters.sede;
+      const matchesCC = !filters.cc || item.cc === filters.cc;
       const matchesSubfamilia = !filters.subfamilia || item.subfamilia === filters.subfamilia;
       const matchesSearch = !filters.search || 
         item.articulo.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -68,11 +71,12 @@ export default function App() {
       else if (filters.status === 'faltantes') matchesStatus = item.tipo === 'FALTANTE';
       else if (filters.status === 'sobrantes') matchesStatus = item.tipo === 'SOBRANTE';
 
-      return matchesSede && matchesSubfamilia && matchesSearch && matchesStatus;
+      return matchesSede && matchesCC && matchesSubfamilia && matchesSearch && matchesStatus;
     });
   }, [inventoryData, filters]);
 
   const uniqueSedes = useMemo(() => Array.from(new Set(inventoryData.map(i => i.sede))), [inventoryData]);
+  const uniqueCCs = useMemo(() => Array.from(new Set(inventoryData.map(i => i.cc).filter(Boolean))), [inventoryData]);
   const uniqueSubfamilias = useMemo(() => Array.from(new Set(inventoryData.map(i => i.subfamilia))), [inventoryData]);
 
   const formatCurrency = (val: number) => 
@@ -169,6 +173,7 @@ export default function App() {
 
             <Filters 
               sedes={uniqueSedes} 
+              ccs={uniqueCCs}
               subfamilias={uniqueSubfamilias} 
               filters={filters} 
               setFilters={setFilters} 

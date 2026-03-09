@@ -13,6 +13,7 @@ export interface ArticleSummary {
   articulo: string;
   subarticulo: string; // Unit of measure
   subfamilia: string;
+  cc: string;
   codBarras: string;
   movements: InventoryMovement[];
   totalDiferencia: number;

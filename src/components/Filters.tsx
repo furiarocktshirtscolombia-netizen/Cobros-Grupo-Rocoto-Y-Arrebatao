@@ -3,9 +3,11 @@ import { Filter, Search } from 'lucide-react';
 
 interface FiltersProps {
   sedes: string[];
+  ccs: string[];
   subfamilias: string[];
   filters: {
     sede: string;
+    cc: string;
     subfamilia: string;
     status: string;
     search: string;
@@ -13,14 +15,14 @@ interface FiltersProps {
   setFilters: (f: any) => void;
 }
 
-export const Filters: React.FC<FiltersProps> = ({ sedes, subfamilias, filters, setFilters }) => {
+export const Filters: React.FC<FiltersProps> = ({ sedes, ccs, subfamilias, filters, setFilters }) => {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
       <div className="flex items-center space-x-2 mb-4 text-slate-400">
         <Filter className="w-4 h-4" />
         <span className="text-xs font-bold uppercase tracking-widest">Filtros de Análisis</span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
           <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Sede (Almacén)</label>
           <select 
@@ -30,6 +32,17 @@ export const Filters: React.FC<FiltersProps> = ({ sedes, subfamilias, filters, s
           >
             <option value="">Todas las sedes</option>
             {sedes.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Centro de Costos</label>
+          <select 
+            value={filters.cc}
+            onChange={(e) => setFilters({ ...filters, cc: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Todos los CC</option>
+            {ccs.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
