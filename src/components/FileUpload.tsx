@@ -6,7 +6,7 @@ import { ArticleSummary } from '../types';
 import { motion } from 'motion/react';
 
 interface FileUploadProps {
-  onDataLoaded: (data: ArticleSummary[]) => void;
+  onDataLoaded: (data: ArticleSummary[], debug?: any, preview?: any[]) => void;
   onReset: () => void;
   hasData: boolean;
 }
@@ -16,15 +16,11 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onReset, h
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileInfo, setFileInfo] = useState<{ name: string, sheet: string, rows: number } | null>(null);
-  const [preview, setPreview] = useState<any[]>([]);
-  const [debug, setDebug] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
     setLoading(true);
     setError(null);
-    setPreview([]);
-    setDebug(null);
     
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -48,7 +44,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onReset, h
       }
 
       const { articles, errors, debug: debugInfo } = normalizeData(json);
-      setDebug(debugInfo);
       
       if (errors.length > 0) {
         setError(errors[0]);
@@ -62,10 +57,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onReset, h
         rows: json.length
       });
 
-      // Preview first 10 rows
-      setPreview(json.slice(0, 10));
-      
-      onDataLoaded(articles);
+      onDataLoaded(articles, debugInfo, json.slice(0, 10));
       setLoading(false);
     } catch (err: any) {
       console.error("Excel Processing Error:", err);
@@ -87,7 +79,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onReset, h
 
   const handleReset = () => {
     setFileInfo(null);
-    setPreview([]);
     setError(null);
     onReset();
   };
@@ -95,84 +86,28 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded, onReset, h
   if (hasData && fileInfo) {
     return (
       <div className="space-y-4 mb-8">
-        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
-          <div className="flex items-center space-x-4">
-            <div className="bg-emerald-500 p-3 rounded-xl shadow-lg shadow-emerald-100">
-              <FileSpreadsheet className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
+          <div className="flex items-center space-x-5">
+            <div className="bg-emerald-100 p-4 rounded-2xl">
+              <FileSpreadsheet className="w-8 h-8 text-emerald-600" />
             </div>
             <div>
-              <p className="text-sm font-bold text-emerald-900">{fileInfo.name}</p>
-              <div className="flex items-center space-x-3 mt-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">
-                  Hoja: {fileInfo.sheet}
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">
-                  {fileInfo.rows} Filas leídas
-                </span>
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Archivo cargado correctamente</p>
               </div>
+              <h3 className="text-lg font-bold text-slate-900 mt-1">{fileInfo.name}</h3>
+              <p className="text-sm text-slate-500 font-medium">{fileInfo.rows.toLocaleString()} registros procesados con éxito</p>
             </div>
           </div>
           <button 
             onClick={handleReset}
-            className="p-2 hover:bg-emerald-100 rounded-full transition-colors text-emerald-600"
-            title="Cargar otro archivo"
+            className="flex items-center space-x-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold transition-all border border-slate-200"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
+            <span>Cargar otro</span>
           </button>
         </div>
-
-        {debug && (
-          <div className="bg-slate-800 text-slate-300 p-4 rounded-2xl text-[10px] font-mono overflow-auto max-h-40">
-            <p className="text-indigo-400 font-bold mb-2 uppercase tracking-widest">Depuración de Mapeo de Columnas</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-slate-500 mb-1">Encabezados Originales:</p>
-                <ul className="list-disc list-inside">
-                  {debug.originalHeaders.map((h: string, i: number) => (
-                    <li key={i}>{h}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="text-slate-500 mb-1">Mapeo Resuelto:</p>
-                <pre>{JSON.stringify(debug.mappedColumns, null, 2)}</pre>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {preview.length > 0 && (
-          <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-            <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex items-center space-x-2">
-              <Table className="w-3 h-3 text-slate-400" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Vista previa de datos crudos</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[10px]">
-                <thead>
-                  <tr className="bg-slate-50/50">
-                    {Object.keys(preview[0]).map(key => (
-                      <th key={key} className="px-3 py-2 text-left font-bold text-slate-500 border-b border-slate-100 whitespace-nowrap">
-                        {key}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.map((row, i) => (
-                    <tr key={i} className="border-b border-slate-50 last:border-0">
-                      {Object.values(row).map((val: any, j) => (
-                        <td key={j} className="px-3 py-1.5 text-slate-600 whitespace-nowrap">
-                          {val?.toString() || '-'}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

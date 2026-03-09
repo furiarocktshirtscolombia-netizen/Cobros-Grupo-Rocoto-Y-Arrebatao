@@ -24,7 +24,9 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const [inventoryData, setInventoryData] = useState<ArticleSummary[]>([]);
-  const [activeTab, setActiveTab] = useState<'summary' | 'analysis' | 'charges'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'analysis' | 'charges' | 'debug'>('summary');
+  const [debugMode] = useState(false); // Set to true to enable the Debug tab
+  const [debugData, setDebugData] = useState<{ info: any, preview: any[] } | null>(null);
   const [filters, setFilters] = useState({
     sede: '',
     subfamilia: '',
@@ -34,8 +36,11 @@ export default function App() {
 
   const stats = useMemo(() => getDashboardStats(inventoryData), [inventoryData]);
 
-  const handleDataLoaded = (data: ArticleSummary[]) => {
+  const handleDataLoaded = (data: ArticleSummary[], debug?: any, preview?: any[]) => {
     setInventoryData(data);
+    if (debug && preview) {
+      setDebugData({ info: debug, preview });
+    }
     setActiveTab('summary');
   };
 
@@ -89,26 +94,34 @@ export default function App() {
           </div>
           
           {inventoryData.length > 0 && (
-            <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
-              <button 
-                onClick={() => setActiveTab('summary')}
-                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'summary' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Resumen
-              </button>
-              <button 
-                onClick={() => setActiveTab('analysis')}
-                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Análisis
-              </button>
-              <button 
-                onClick={() => setActiveTab('charges')}
-                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'charges' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Cobros
-              </button>
-            </div>
+              <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
+                <button 
+                  onClick={() => setActiveTab('summary')}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'summary' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Resumen
+                </button>
+                <button 
+                  onClick={() => setActiveTab('analysis')}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Análisis
+                </button>
+                <button 
+                  onClick={() => setActiveTab('charges')}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'charges' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Cobros
+                </button>
+                {debugMode && (
+                  <button 
+                    onClick={() => setActiveTab('debug')}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === 'debug' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Debug
+                  </button>
+                )}
+              </div>
           )}
         </div>
       </header>
@@ -166,6 +179,7 @@ export default function App() {
                 {activeTab === 'summary' && <><LayoutDashboard className="w-5 h-5 mr-2 text-indigo-500" /> Resumen por Sede</>}
                 {activeTab === 'analysis' && <><FileSearch className="w-5 h-5 mr-2 text-indigo-500" /> Detalle de Análisis</>}
                 {activeTab === 'charges' && <><Receipt className="w-5 h-5 mr-2 text-indigo-500" /> Reporte Final de Cobro</>}
+                {activeTab === 'debug' && <><FileSearch className="w-5 h-5 mr-2 text-indigo-500" /> Debug Técnico</>}
               </h2>
               <ExportButtons 
                 data={activeTab === 'charges' ? filteredData.filter(a => a.debeCobrar) : filteredData} 
@@ -231,6 +245,67 @@ export default function App() {
                   <InventoryTable 
                     data={activeTab === 'charges' ? filteredData.filter(a => a.debeCobrar) : filteredData} 
                   />
+                </motion.div>
+              )}
+
+              {activeTab === 'debug' && debugData && (
+                <motion.div
+                  key="debug"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="space-y-6"
+                >
+                  <div className="bg-slate-800 text-slate-300 p-6 rounded-2xl font-mono text-xs overflow-auto max-h-[400px] shadow-xl">
+                    <p className="text-indigo-400 font-bold mb-4 uppercase tracking-widest border-b border-slate-700 pb-2">Mapeo de Columnas Detectadas</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div>
+                        <p className="text-slate-500 mb-2 font-bold">Encabezados Originales:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {debugData.info.originalHeaders.map((h: string, i: number) => (
+                            <li key={i} className="hover:text-white transition-colors">{h}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 mb-2 font-bold">Mapeo Resuelto:</p>
+                        <pre className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">{JSON.stringify(debugData.info.mappedColumns, null, 2)}</pre>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <LayoutDashboard className="w-4 h-4 text-slate-400" />
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Vista previa de datos crudos (Primeras 10 filas)</span>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-slate-50/50">
+                            {Object.keys(debugData.preview[0]).map(key => (
+                              <th key={key} className="px-4 py-3 text-left font-bold text-slate-600 border-b border-slate-100 whitespace-nowrap">
+                                {key}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {debugData.preview.map((row, i) => (
+                            <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                              {Object.values(row).map((val: any, j) => (
+                                <td key={j} className="px-4 py-2 text-slate-600 whitespace-nowrap">
+                                  {val?.toString() || '-'}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -111,6 +111,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({ data, onlyCobrable
         });
 
         const row: any[] = [art.articulo, art.subarticulo];
+        let pivotTotal = 0;
         
         sortedMonths.forEach(monthKey => {
           const dates = monthsMap.get(monthKey)!;
@@ -120,14 +121,25 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({ data, onlyCobrable
             const val = dateValues.get(startOfDay(date).getTime()) || 0;
             row.push(val);
             monthSum += val;
+            pivotTotal += val;
           });
           
           row.push(monthSum);
         });
 
+        // Validation Log as requested
+        if (Math.abs(pivotTotal - art.totalDiferencia) > 0.000001) {
+          console.warn(`Discrepancia detectada en ${art.articulo}:`, {
+            rawTotal: art.totalDiferencia,
+            pivotTotal: pivotTotal,
+            diff: art.totalDiferencia - pivotTotal
+          });
+        }
+
         const costToUse = art.ultimoCoste || art.costePromedio || 0;
         const totalCobro = Math.abs(art.totalDiferencia) * costToUse;
 
+        // Always use art.totalDiferencia (raw sum from base records) for the final column
         row.push(art.totalDiferencia, costToUse, totalCobro);
         rows.push(row);
       });

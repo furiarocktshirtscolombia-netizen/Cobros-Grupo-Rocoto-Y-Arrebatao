@@ -159,8 +159,6 @@ export function normalizeData(rawRows: RawInventoryRow[]): { articles: ArticleSu
   const grouped = new Map<string, ArticleSummary>();
 
   normalized.forEach(row => {
-    const key = `${row.sede}|${row.articulo}`;
-    
     let fecha = row.fecha;
     if (fecha instanceof Date) {
       // Already a date from XLSX
@@ -187,17 +185,35 @@ export function normalizeData(rawRows: RawInventoryRow[]): { articles: ArticleSu
       return;
     }
 
-    const variacion = parseFloat(row.variacion) || 0;
-    const costeLinea = parseFloat(row.costeLinea) || 0;
+    const variacionRaw = row.variacion;
+    let variacion = 0;
+    if (typeof variacionRaw === 'number') {
+      variacion = variacionRaw;
+    } else if (typeof variacionRaw === 'string') {
+      // Handle strings with commas or spaces
+      variacion = parseFloat(variacionRaw.replace(/,/g, '').trim()) || 0;
+    }
+
+    const costeRaw = row.costeLinea;
+    let costeLinea = 0;
+    if (typeof costeRaw === 'number') {
+      costeLinea = costeRaw;
+    } else if (typeof costeRaw === 'string') {
+      costeLinea = parseFloat(costeRaw.replace(/,/g, '').trim()) || 0;
+    }
+
     const subarticulo = (row.subarticulo || 'UNIDADES').toString().toUpperCase().trim();
+    const sedeStr = row.sede.toString().trim();
+    const articuloStr = row.articulo.toString().trim();
+    const key = `${sedeStr}|${articuloStr}`;
 
     if (!grouped.has(key)) {
       grouped.set(key, {
-        sede: row.sede.toString(),
-        articulo: row.articulo.toString(),
+        sede: sedeStr,
+        articulo: articuloStr,
         subarticulo,
-        subfamilia: (row.subfamilia || '').toString(),
-        codBarras: (row.codBarras || '').toString(),
+        subfamilia: (row.subfamilia || '').toString().trim(),
+        codBarras: (row.codBarras || '').toString().trim(),
         movements: [],
         totalDiferencia: 0,
         costePromedio: 0,
