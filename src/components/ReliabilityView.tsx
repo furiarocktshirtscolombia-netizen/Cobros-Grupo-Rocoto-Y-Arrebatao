@@ -37,11 +37,16 @@ interface ReliabilityViewProps {
 }
 
 export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
+  const [viewMode, setViewMode] = useState<'sede' | 'cc'>('sede');
   const [selectedSede, setSelectedSede] = useState<ReliabilityStats | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<string>('all');
 
-  const summary = useMemo(() => getReliabilitySummary(data), [data]);
+  const summary = useMemo(() => getReliabilitySummary(data, viewMode), [data, viewMode]);
+
+  const entityLabel = viewMode === 'sede' ? 'Sede' : 'Centro de Costos';
+  const entitiesLabel = viewMode === 'sede' ? 'Sedes' : 'Centros de Costos';
+  const reportTitle = viewMode === 'sede' ? 'Confiabilidad por Sede' : 'Confiabilidad por Centro de Costos';
 
   const filteredSedes = useMemo(() => {
     return summary.sedesStats.filter(s => {
@@ -66,12 +71,49 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
 
   const getLevelProgressColor = (nivel: string) => {
     switch (nivel) {
-      case 'Alta': return 'bg-emerald-500';
-      case 'Media': return 'bg-amber-500';
-      case 'Baja': return 'bg-orange-500';
-      case 'Crítica': return 'bg-rose-500';
-      default: return 'bg-slate-500';
+      case 'Alta': return 'text-emerald-500';
+      case 'Media': return 'text-amber-500';
+      case 'Baja': return 'text-orange-500';
+      case 'Crítica': return 'text-rose-500';
+      default: return 'text-slate-500';
     }
+  };
+
+  const CircularProgress = ({ percentage, nivel }: { percentage: number, nivel: string }) => {
+    const radius = 32;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (percentage / 100) * circumference;
+    const color = getLevelProgressColor(nivel);
+
+    return (
+      <div className="relative flex items-center justify-center">
+        <svg className="w-20 h-20 transform -rotate-90">
+          <circle
+            cx="40"
+            cy="40"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="6"
+            fill="transparent"
+            className="text-slate-100"
+          />
+          <circle
+            cx="40"
+            cy="40"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="6"
+            fill="transparent"
+            strokeDasharray={circumference}
+            style={{ strokeDashoffset: offset }}
+            className={`${color} transition-all duration-1000 ease-out`}
+          />
+        </svg>
+        <div className="absolute flex flex-col items-center justify-center">
+          <span className="text-lg font-black text-slate-900 leading-none">{Math.round(percentage)}%</span>
+        </div>
+      </div>
+    );
   };
 
   const distributionData = useMemo(() => {
@@ -98,10 +140,25 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Informe de Confiabilidad por Sede</h2>
-          <p className="text-slate-500">Indicador de precisión y consistencia del inventario por sede</p>
+          <h2 className="text-2xl font-bold text-slate-900">{reportTitle}</h2>
+          <p className="text-slate-500">Indicador de precisión y consistencia del inventario por {entityLabel.toLowerCase()}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* View Mode Selector */}
+          <div className="bg-slate-100 p-1 rounded-xl flex mr-4">
+            <button
+              onClick={() => setViewMode('sede')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'sede' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Por Sede
+            </button>
+            <button
+              onClick={() => setViewMode('cc')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'cc' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Por Centro de Costos
+            </button>
+          </div>
           <button className="flex items-center space-x-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-all">
             <FileDown className="w-4 h-4" />
             <span>Exportar Excel</span>
@@ -125,7 +182,7 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
               <TrendingUp className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs text-indigo-600 font-semibold uppercase">Sede más confiable</p>
+              <p className="text-xs text-indigo-600 font-semibold uppercase">{entityLabel} más confiable</p>
               <p className="text-lg font-bold text-slate-900">{summary.sedeMasConfiable}</p>
             </div>
           </div>
@@ -134,7 +191,7 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
               <TrendingDown className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs text-indigo-600 font-semibold uppercase">Sede menos confiable</p>
+              <p className="text-xs text-indigo-600 font-semibold uppercase">{entityLabel} menos confiable</p>
               <p className="text-lg font-bold text-slate-900">{summary.sedeMenosConfiable}</p>
             </div>
           </div>
@@ -164,10 +221,10 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-2">
             <Building2 className="w-5 h-5 text-slate-400" />
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sedes</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{entitiesLabel}</span>
           </div>
           <p className="text-3xl font-bold text-slate-900">{summary.totalSedes}</p>
-          <p className="text-sm text-slate-500 mt-1">Sedes evaluadas</p>
+          <p className="text-sm text-slate-500 mt-1">{entitiesLabel} evaluados</p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-2">
@@ -200,7 +257,7 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex items-center space-x-2 mb-6 text-slate-400">
             <BarChart3 className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-widest">Confiabilidad por Sede (%)</span>
+            <span className="text-xs font-bold uppercase tracking-widest">Confiabilidad por {entityLabel} (%)</span>
           </div>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -256,14 +313,14 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center space-x-2 text-slate-400">
             <Filter className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-widest">Filtros de Sedes</span>
+            <span className="text-xs font-bold uppercase tracking-widest">Filtros de {entitiesLabel}</span>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <div className="relative min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
                 type="text"
-                placeholder="Buscar sede..."
+                placeholder={`Buscar ${entityLabel.toLowerCase()}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -291,47 +348,49 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
             key={sede.sede}
             layoutId={sede.sede}
             onClick={() => setSelectedSede(sede)}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-pointer group"
+            className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-pointer group flex flex-col h-full"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{sede.sede}</h4>
-                <div className={`mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getLevelColor(sede.nivel)}`}>
+            {/* FILA SUPERIOR: Nombre (izq) + Gauge (der) */}
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1 min-w-0 pr-4">
+                <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors text-lg line-clamp-2 leading-tight">
+                  {sede.sede}
+                </h4>
+                {/* DEBAJO DEL NOMBRE: Etiqueta de estado */}
+                <div className={`mt-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getLevelColor(sede.nivel)}`}>
                   {sede.nivel}
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-2xl font-black text-slate-900">{Math.round(sede.confiabilidad)}%</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Confiabilidad</p>
-              </div>
+              <CircularProgress percentage={sede.confiabilidad} nivel={sede.nivel} />
             </div>
 
-            <div className="space-y-3">
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${sede.confiabilidad}%` }}
-                  className={`h-full ${getLevelProgressColor(sede.nivel)}`}
-                />
-              </div>
+            {/* DEBAJO DEL BLOQUE SUPERIOR: Una sola línea horizontal de texto */}
+            <div className="mb-6">
+              <p className="text-sm font-bold text-slate-700">
+                Confiabilidad: <span className="text-indigo-600">{sede.confiabilidad.toFixed(1)}%</span>
+              </p>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div>
+            {/* Bloques de Artículos, Diferencias, Impacto */}
+            <div className="space-y-4 flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Artículos</p>
                   <p className="text-sm font-bold text-slate-700">{sede.articulosEvaluados}</p>
                 </div>
-                <div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Diferencias</p>
                   <p className="text-sm font-bold text-slate-700">{sede.articulosConDiferencia}</p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Impacto Económico</p>
-                  <p className="text-sm font-bold text-rose-600">{formatCurrency(sede.impactoEconomico)}</p>
+                <div className="col-span-2 bg-rose-50/50 p-3 rounded-xl border border-rose-100/50">
+                  <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest">Impacto Económico</p>
+                  <p className="text-lg font-black text-rose-600 leading-none mt-1">{formatCurrency(sede.impactoEconomico)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between text-indigo-600 font-bold text-xs group-hover:translate-x-1 transition-transform">
+            {/* Link: Ver detalle completo */}
+            <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between text-indigo-600 font-bold text-xs group-hover:translate-x-1 transition-transform">
               <span>Ver detalle completo</span>
               <ChevronRight className="w-4 h-4" />
             </div>
@@ -344,7 +403,7 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
         <div className="p-6 border-b border-slate-50 flex items-center justify-between">
           <div className="flex items-center space-x-2 text-slate-400">
             <TrendingUp className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-widest">Ranking de Confiabilidad por Sede</span>
+            <span className="text-xs font-bold uppercase tracking-widest">Ranking de Confiabilidad por {entityLabel}</span>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -352,7 +411,7 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
             <thead>
               <tr className="bg-slate-50/50">
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pos</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sede</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{entityLabel}</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Confiabilidad %</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Evaluados</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Sin Dif.</th>
@@ -498,7 +557,7 @@ export const ReliabilityView: React.FC<ReliabilityViewProps> = ({ data }) => {
               <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Impacto Total Sede</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Impacto Total {entityLabel}</p>
                     <p className="text-xl font-black text-rose-600">{formatCurrency(selectedSede.impactoEconomico)}</p>
                   </div>
                 </div>

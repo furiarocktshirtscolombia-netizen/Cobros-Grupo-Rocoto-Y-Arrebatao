@@ -302,15 +302,16 @@ export function getDashboardStats(articles: ArticleSummary[]): DashboardStats {
   };
 }
 
-export function getReliabilitySummary(articles: ArticleSummary[]): ReliabilitySummary {
-  const sedesMap = new Map<string, ArticleSummary[]>();
+export function getReliabilitySummary(articles: ArticleSummary[], groupBy: 'sede' | 'cc' = 'sede'): ReliabilitySummary {
+  const entityMap = new Map<string, ArticleSummary[]>();
   
   articles.forEach(a => {
-    if (!sedesMap.has(a.sede)) sedesMap.set(a.sede, []);
-    sedesMap.get(a.sede)!.push(a);
+    const key = groupBy === 'sede' ? a.sede : (a.cc || 'SIN CC');
+    if (!entityMap.has(key)) entityMap.set(key, []);
+    entityMap.get(key)!.push(a);
   });
 
-  const sedesStats: ReliabilityStats[] = Array.from(sedesMap.entries()).map(([sede, arts]) => {
+  const sedesStats: ReliabilityStats[] = Array.from(entityMap.entries()).map(([entityName, arts]) => {
     const articulosEvaluados = arts.length;
     const articulosSinDiferencia = arts.filter(a => Math.abs(a.totalDiferencia) < 0.0001).length;
     const articulosConDiferencia = articulosEvaluados - articulosSinDiferencia;
@@ -344,7 +345,7 @@ export function getReliabilitySummary(articles: ArticleSummary[]): ReliabilitySu
     }));
 
     return {
-      sede,
+      sede: entityName,
       confiabilidad,
       nivel,
       articulosEvaluados,
